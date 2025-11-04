@@ -4,14 +4,26 @@ version = "0.1.0"
 description = ""
 authors = ["nicolas <nsocri@ibmb.csic.es>"]
 readme = "README.md"
+license = "MIT"
+packages = [{include = "indexmaker", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.15"
 pdfplumber = "^0.11.7"
 python-docx = "^1.2.0"
 nltk = "^3.9.2"
+docx2pdf = "^0.1.8"
 
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "^6.16.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+#[tool.poetry-pyinstaller-plugin]
+#version = "6.16.0"
+
+#[tool.poetry-pyinstaller-plugin.scripts]
+#pdf2index = { source = "src/indexmaker/indexmaker_gui.pyw", type = "onefile", bundle = true }
