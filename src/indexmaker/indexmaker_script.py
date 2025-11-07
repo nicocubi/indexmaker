@@ -16,11 +16,20 @@ import nltk
 import sys, os
 
 
+# NLTK setup
+for resource in ('tokenizers/punkt','tokenizers/punkt_tab', 'corpora/stopwords'):
+    try:
+        nltk.data.find(resource)
+    except LookupError:
+        nltk.download(resource.split('/')[1])
+
+# Constants
 MIN_NUM_LETTERS = 2
+
 
 class IndexMaker():
 
-    def __init__(self, input_file_path:str,  start_from_page:int=1, output_docx:str=None, own_index:str=None):
+    def __init__(self, input_file_path:str,  start_from_page:int=1, output_docx:str=None, own_index:str=None, gui_obj=None):
         """
         Initialize the IndexMaker with the path to the PDF and output DOCX file.
         input_file_path: Path to the input PDF file.
@@ -39,9 +48,10 @@ class IndexMaker():
         self.pages = {}
         self.index = None 
         self.own_index = own_index
-        self.start_from_page = max(1, start_from_page)
         self.text_extracted = False
         self.own_index_set = set()
+        self._start_from_page = start_from_page
+        self.gui_obj = gui_obj
 
         # If any, extract the list of words to consider
         self.process_own_index()
@@ -57,7 +67,27 @@ class IndexMaker():
         else:
             raise ValueError("Unsupported file format. Please provide a PDF or Word document.")
 
-        print(f"Detected input format: {extension}")
+        send_msg_to_gui(f"Detected input format: {extension}")
+
+    @property
+    def start_from_page(self): 
+
+        if isinstance(self._start_from_page, str):
+            try:
+                return int(max(1, int(self._start_from_page)))
+            except:
+                send_msg_to_gui("Warning: start_from_page should be an integer. Defaulting to 1.")
+                return 1
+
+        elif isinstance(self._start_from_page, int):
+            return max(1, _start_from_page)
+
+        elif isinstance(self._start_from_page, float):
+            return int(max(1, int(self._start_from_page)))
+        else:
+            send_msg_to_gui("Warning: start_from_page should be an integer. Defaulting to 1.")
+            return 1
+
 
     def process_pdf(self, input_file):
         """
@@ -203,22 +233,35 @@ class IndexMaker():
             # Save the document
             doc.save(self.output_docx)
         else:
-            print("Empty index!")
+            send_msg_to_gui("Empty index!")
+
+    def send_msg_to_gui(self, msg, clearscreen=False):
+        """
+        Send a message to the GUI if available, otherwise print to console.
+        """
+        if self.gui_obj:
+            self.gui_obj.display_msg(msg, clearscreen)
+        else:
+            print(msg)
 
     def main(self):
+        self.send_msg_to_gui("Starting text extraction...")
         self.extract_all_text()
+
+        self.send_msg_to_gui("Creating index...")
         self.create_index()
+
+        self.send_msg_to_gui("Saving index to Word document...")
         self.save_index_to_docx()
+
+
+        return self.output_docx
 
 
 #----------MAIN
 
 if __name__ == "__main__":
 
-
-    # Ensure NLTK resources are available
-    #nltk.download('punkt')
-    #nltk.download('stopwords')
     parser = argparse.ArgumentParser(description="Generate a word index from a PDF file.")
     parser.add_argument("input_file", help="Path to the input file.")
     parser.add_argument("--output", help="Path to the output Word document.", default=None)

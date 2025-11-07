@@ -7,6 +7,9 @@ readme = "README.md"
 license = "MIT"
 packages = [{include = "indexmaker", from = "src"}]
 
+[tool.poetry.scripts]
+pdf2index = "indexmaker.indexmaker_gui:main"
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.15"
 pdfplumber = "^0.11.7"
