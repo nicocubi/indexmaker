@@ -2,7 +2,7 @@
 name = "indexmaker"
 version = "0.2.0"
 description = ""
-authors = ["nicolas <nsocri@ibmb.csic.es>"]
+authors = ["Nicolas Soler <nicolas@nicolassoler.eu>"]
 readme = "README.md"
 license = "MIT"
 packages = [{include = "indexmaker", from = "src"}]
