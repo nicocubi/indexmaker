@@ -1,0 +1,4 @@
+# use platypus
+https://apple.stackexchange.com/questions/256987/how-to-create-an-icon-for-homebrew-installed-software-evince-in-macos
+
+
