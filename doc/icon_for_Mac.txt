@@ -1,4 +1,6 @@
 # use platypus
 https://apple.stackexchange.com/questions/256987/how-to-create-an-icon-for-homebrew-installed-software-evince-in-macos
 
+# Or just create a .command file
+https://superuser.com/questions/1659291/how-do-i-create-an-icon-as-a-shortcut-on-macos-to-run-specific-shell-command
 
