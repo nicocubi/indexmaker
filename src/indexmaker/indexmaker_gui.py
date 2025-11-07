@@ -162,10 +162,13 @@ class IndexMakerGUI():
             messagebox.showerror("Error", "Output file cannot be opened or not found.")
 
 
-    def main(self):
+    def run(self):
         # Start the GUI event loop
         self.root.mainloop()
 
-if __name__ == "__main__":
+def main():
     gui = IndexMakerGUI()
-    gui.main()
+    gui.run()
+
+if __name__ == "__main__":
+    main()
