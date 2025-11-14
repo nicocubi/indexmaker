@@ -20,5 +20,8 @@ pip install indexmaker
 # you can upload you pdf and click "Run!"
 ```
 
+# Recommended Python version
+3.12
+
 # Tip
 You can provide your own index in docx format. If you do this, only the words present in that index will be counted in the input pdf document.
