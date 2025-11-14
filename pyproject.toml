@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "indexmaker"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Nicolas Soler <nicolas@nicolassoler.eu>"]
 readme = "README.md"
@@ -20,6 +20,12 @@ docx2pdf = "^0.1.8"
 
 [tool.poetry.group.dev.dependencies]
 pyinstaller = "^6.16.0"
+
+
+[[tool.poetry.source]]
+name = "pypi-nicocubi"
+url = "https://upload.pypi.org/legacy/"
+priority = "default"
 
 [build-system]
 requires = ["poetry-core"]
