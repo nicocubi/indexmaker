@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox
-import os
-from indexmaker.indexmaker_script import IndexMaker
+import subprocess, platform, os
 import threading
+from indexmaker.indexmaker_script import IndexMaker
 
 
 class IndexMakerGUI():
