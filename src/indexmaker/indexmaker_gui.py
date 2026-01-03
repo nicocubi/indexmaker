@@ -157,9 +157,21 @@ class IndexMakerGUI():
         output_file = self.output_entry.get()
         if os.path.exists(output_file):
             # open it for linux, mac windows
-            os.startfile(output_file) if os.name == "nt" else os.system(f"xdg-open {output_file}")
+            #os.startfile(output_file) if os.name == "nt" else os.system(f"xdg-open {output_file}")
+            IndexMakerGUI.open_file(output_file)
         else:
             messagebox.showerror("Error", "Output file cannot be opened or not found.")
+
+    @staticmethod
+    def open_file(filepath):
+
+        if platform.system() == 'Darwin':       # macOS
+            subprocess.call(('open', filepath))
+
+        elif platform.system() == 'Windows':    # Windows
+            os.startfile(filepath)
+        else:                                   # linux variants
+            subprocess.call(('xdg-open', filepath))
 
 
     def run(self):

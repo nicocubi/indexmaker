@@ -1,0 +1,2 @@
+poetry add pyinstaller --group dev
+poetry run pyinstaller --onefile --noconsole --icon=logo/round_logo_moon.icns ./src/indexmaker/indexmaker_gui.py
