@@ -148,14 +148,13 @@ class IndexMaker():
                     # detect proper nouns and tag them with 42
                     mots_liste = filtered_words_str.split()
                     if '/' not in filtered_words_str and len(mots_liste)> 1 and mots_liste[-1][0].isupper():
-                        print("OK", filtered_words_str)
                         filtered_words_str = filtered_words_str.replace(" ","42")
 
                     words_set = set([filtered_words_str,])  # Wrap the single string in a list before creating a set
 
                     self.own_index_set.update(words_set)
 
-                print("Current own_index_set:",self.own_index_set)
+                print("Custom terms to find:",self.own_index_set)
 
             elif own_index_extension == ".txt":
                 with open(self.own_index, 'r', encoding='utf-8') as f:
@@ -218,11 +217,12 @@ class IndexMaker():
                     # If the term has two words, and the second term starts with
                     # a capital letter, we have a proper noun
                     # then only search for the second term (family name)
-                    elif "42" in term :
+                    elif "42" in term : # proper nouns
                         term = term.replace("42"," ")
-                        term2 = term.split()[1]
+                        term2 = term.split()[1] # search the family name of the proper noun
+                        # the search should be case-SENSITIVE
                         pattern = r'\b' + re.escape(term2) + r'\b'
-                        if re.search(pattern, text, re.IGNORECASE):
+                        if re.search(pattern, text):
                             word_pages[term].add(page_number)
 
                     # if the term bears parenthesis, remove them and search for the remaining part
