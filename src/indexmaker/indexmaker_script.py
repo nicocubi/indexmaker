@@ -131,33 +131,41 @@ class IndexMaker():
                 with pdfplumber.open(self.input_file_path) as pdf:
                     for page in pdf.pages:
                         text = page.extract_text() or ""
-                        words_set = set(word.lower() for word in word_tokenize(text) if word.isalpha())
+                        words_set = set(word for word in word_tokenize(text) if word.isalpha())
                         self.own_index_set.update(words_set)
 
                         #self.pages[page_number] = extract.lower()
                 
             elif own_index_extension in [".docx", ".doc"]:
+                print("Custom index detected!")
                 for paragraph in Document(self.own_index).paragraphs:
                     text = paragraph.text or ""
                     # filter so that only words matching the pattern "\w+\:" are considered"
-                    pattern = r"\w+\:"
+                    pattern = r"\w+(?:[ -][\w\/\(\)\.\']+)*"
                     filtered_words_list = re.findall(pattern, text)
                     filtered_words_str = ' '.join(filtered_words_list)
 
-                    words_set = set(word.lower() for word in word_tokenize(filtered_words_str) if word.isalpha())
+                    # detect proper nouns and tag them with 42
+                    if len(filtered_words_list) > 1 and filtered_words_list[-1][0].isupper():
+                        filtered_words_str = filtered_words_str.replace(" ","42")
+
+                    words_set = set([filtered_words_str,])  # Wrap the single string in a list before creating a set
+
                     self.own_index_set.update(words_set)
+
+                print("Current own_index_set:",self.own_index_set)
 
             elif own_index_extension == ".txt":
                 with open(self.own_index, 'r', encoding='utf-8') as f:
                     text = f.read()
-                    words_set = set(word.lower() for word in word_tokenize(text) if word.isalpha())
+                    words_set = set(word for word in word_tokenize(text) if word.isalpha())
                     self.own_index_set.update(words_set)
             else:
 
                 raise ValueError("Unsupported file format for own_index. Please provide a PDF or Word document.")
 
             # Now remove all numbers and punctuation signs from the set, 
-            self.own_index_set = {word for word in self.own_index_set if len(word) > MIN_NUM_LETTERS}
+            self.own_index_set = {word for word in self.own_index_set if len(word) >= MIN_NUM_LETTERS}
         else:
             pass
 
@@ -189,22 +197,67 @@ class IndexMaker():
 
         # Process each page
         for page_number, text in self.pages.items():
-            tokens = word_tokenize(text)
-            for word in tokens:
-                # Skip single-letter words and stop words
-                if len(word) > 1 and word.isalpha() and word.lower() not in stop_words:
-                    stemmed = stemmer.stem(word.lower())
-                    if stemmed not in stem_to_original:
-                        stem_to_original[stemmed] = word.lower()
-                    word_pages[stem_to_original[stemmed]].add(page_number)
 
-        # Convert to a sorted dictionary
-        if self.own_index_set:
-            # Filter the word_pages to include only those in own_index_set
-            filtered_word_pages = {word: pages for word, pages in word_pages.items() if word in self.own_index_set}
-            self.index = {word: sorted(pages) for word, pages in filtered_word_pages.items()}
-        else:
-            self.index = {word: sorted(pages) for word, pages in word_pages.items()}
+            if self.own_index_set:
+                # Search each term of the own index set in the page text
+                for term in self.own_index_set:
+
+
+                    # if the term had a bar search for any of the words
+                    if '/' in term:
+                        term2 = term.replace("/","")
+                        subterms = term2.split()
+                        for subterm in subterms:
+                            pattern = r'\b' + re.escape(subterm) + r'\b'
+                            if re.search(pattern, text, re.IGNORECASE):
+                                word_pages[term].add(page_number)
+                                break
+
+                    # If the term has two words, and the second term starts with
+                    # a capital letter, we have a proper noun
+                    # then only search for the second term (family name)
+                    elif "42" in term :
+                        term2 = term.split("42")[1]
+                        pattern = r'\b' + re.escape(term2) + r'\b'
+                        if re.search(pattern, text, re.IGNORECASE):
+                            word_pages[term].add(page_number)
+
+                    # if the term bears parenthesis, remove them and search for the remaining part
+                    elif '(' in term and ')' in term:
+                        term2 = re.sub(r'\(.*?\)', '', term).strip()
+                        pattern = r'\b' + re.escape(term2) + r'\b'
+                        if re.search(pattern, text, re.IGNORECASE):
+                            word_pages[term].add(page_number)
+
+                    else:
+                        # consider both plural and singlular forms
+                        # also if an hyphen is present consider that it can sometimes be a space
+                        pattern = r'\b' + re.escape(term).replace(r'\-', r'[- ]') + r's?\b'
+                        if re.search(pattern, text, re.IGNORECASE):
+                            word_pages[term].add(page_number)
+                        else:
+                            # write the word with -1 to indicate it was not found
+                            word_pages[term].add(-1)
+
+
+            # If no custom index is provided (own_index_set is empty), process all words
+            # after tokenization, stemming, and filtering
+            else:
+                tokens = word_tokenize(text)
+                for word in tokens:
+                    # Skip single-letter words and stop words
+                    if len(word) > 1 and word.isalpha() and word.lower() not in stop_words:
+                        stemmed = stemmer.stem(word.lower())
+                        if stemmed not in stem_to_original:
+                            stem_to_original[stemmed] = word.lower()
+                        word_pages[stem_to_original[stemmed]].add(page_number)
+                word_pages = {word.capitalize(): pages for word, pages in word_pages.items() if len(word) >= MIN_NUM_LETTERS}
+
+
+        self.index = {word: sorted(pages) for word, pages in word_pages.items()}
+        # Remove -1 from pages if present
+        self.index = {word : [p for p in pages if p != -1] for word, pages in self.index.items()}
+
 
     def save_index_to_docx(self):
         # Create a Word document

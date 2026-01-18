@@ -1,38 +1,22 @@
-[tool.poetry]
+[project]
 name = "indexmaker"
-version = "0.2.2"
+version = "0.1.0"
 description = ""
-authors = ["Nicolas Soler <nicolas@nicolassoler.eu>"]
+authors = [
+    {name = "nsoler",email = "nicocubi@gmail.com"}
+]
 readme = "README.md"
-license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "pdfplumber (>=0.11.9,<0.12.0)",
+    "python-docx (>=1.2.0,<2.0.0)",
+    "nltk (>=3.9.2,<4.0.0)",
+    "docx2pdf (>=0.1.8,<0.2.0)"
+]
+
+[tool.poetry]
 packages = [{include = "indexmaker", from = "src"}]
 
-[tool.poetry.scripts]
-indexmaker = "indexmaker.indexmaker_gui:main"
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.15"
-pdfplumber = "^0.11.7"
-python-docx = "^1.2.0"
-nltk = "^3.9.2"
-docx2pdf = "^0.1.8"
-
-
-[tool.poetry.group.dev.dependencies]
-pyinstaller = "^6.16.0"
-
-
-[[tool.poetry.source]]
-name = "pypi-nicocubi"
-url = "https://upload.pypi.org/legacy/"
-priority = "primary"
-
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-#[tool.poetry-pyinstaller-plugin]
-#version = "6.16.0"
-
-#[tool.poetry-pyinstaller-plugin.scripts]
-#pdf2index = { source = "src/indexmaker/indexmaker_gui.pyw", type = "onefile", bundle = true }
