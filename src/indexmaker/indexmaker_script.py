@@ -146,7 +146,9 @@ class IndexMaker():
                     filtered_words_str = ' '.join(filtered_words_list)
 
                     # detect proper nouns and tag them with 42
-                    if len(filtered_words_list) > 1 and filtered_words_list[-1][0].isupper():
+                    mots_liste = filtered_words_str.split()
+                    if '/' not in filtered_words_str and len(mots_liste)> 1 and mots_liste[-1][0].isupper():
+                        print("OK", filtered_words_str)
                         filtered_words_str = filtered_words_str.replace(" ","42")
 
                     words_set = set([filtered_words_str,])  # Wrap the single string in a list before creating a set
@@ -217,7 +219,8 @@ class IndexMaker():
                     # a capital letter, we have a proper noun
                     # then only search for the second term (family name)
                     elif "42" in term :
-                        term2 = term.split("42")[1]
+                        term = term.replace("42"," ")
+                        term2 = term.split()[1]
                         pattern = r'\b' + re.escape(term2) + r'\b'
                         if re.search(pattern, text, re.IGNORECASE):
                             word_pages[term].add(page_number)
