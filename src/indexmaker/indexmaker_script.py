@@ -185,6 +185,38 @@ class IndexMaker():
 
         self.text_extracted = True
 
+    def page_numbers_to_hyphens(self, pages:list):
+        """
+        converts a list of page numbers into a string with hyphens for consecutive numbers
+        """
+
+        if not pages:
+            return ""
+
+
+        result_string = ""       
+        pages = sorted(set(pages))
+        current_num = pages[0]
+        tmp_list =[]
+
+        for page_num in pages[1:]:
+            if not isinstance(page_num, int) or page_num < 1:
+                raise ValueError("Page numbers must be positive integers.")
+
+            if page_num == current_num + 1:
+                current_num = page_num
+                tmp_list.append(page_num)
+                continue
+            else:
+                if len(tmp_list) > 1:
+                    result_string += f"{tmp_list[0]}-{tmp_list[-1]}, "
+                else:
+                    result_string += f"{current_num}, "
+                current_num = page_num
+
+        return result_string
+
+
     def create_index(self):
 
         if not self.text_extracted:
@@ -256,10 +288,11 @@ class IndexMaker():
                         word_pages[stem_to_original[stemmed]].add(page_number)
                 word_pages = {word.capitalize(): pages for word, pages in word_pages.items() if len(word) >= MIN_NUM_LETTERS}
 
-
+        # Convert sets to sorted lists
         self.index = {word: sorted(pages) for word, pages in word_pages.items()}
-        # Remove -1 from pages if present
-        self.index = {word : [p for p in pages if p != -1] for word, pages in self.index.items()}
+
+        # Remove -1 from pages if present and convert successive numbers to hyphen ranges
+        self.index = {word : self.page_numbers_to_hyphens([p for p in pages if p != -1]) for word, pages in self.index.items()}
 
 
     def save_index_to_docx(self):
