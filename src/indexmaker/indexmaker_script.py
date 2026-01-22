@@ -2,18 +2,21 @@
 This script processes a PDF or Word document to create an index of words
 (in docx format) along with the pages they appear on.
 """
-
+import sys, os
 import re
 import pdfplumber
 import argparse
+import nltk
 from collections import defaultdict
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
 #import docx2pdf
 from docx import Document
-import nltk
-import sys, os
+from pycountry import countries
+
+
+
 
 
 # NLTK setup
@@ -25,6 +28,11 @@ for resource in ('tokenizers/punkt','tokenizers/punkt_tab', 'corpora/stopwords')
 
 # Constants
 MIN_NUM_LETTERS = 2
+
+# Get a list of all country names of more than one word
+COUNTRY_NAMES = [country.name.upper() for country in countries if len(country.name) > 1]
+
+
 
 
 class IndexMaker():
@@ -99,7 +107,18 @@ class IndexMaker():
                 if page_number >= self.start_from_page:
                     # If we want for example to start at the fourth page and consider it as page 1
                     shift = self.start_from_page - 1
-                    self.pages[page_number - shift] = extract.lower()
+                    new_page_number = page_number - shift
+                    self.pages[new_page_number] = extract.lower()
+
+                    # remove line breaks within words
+                    self.pages[new_page_number] = re.sub(r'(\w)-\n(\w)', r'\1\2', self.pages[new_page_number])
+
+                    # remove all line breaks
+                    self.pages[new_page_number] = self.pages[new_page_number].replace('\n', ' ').replace('\r', ' ').strip()
+
+        # DEBUG print page number and content
+        # for pn, txt in self.pages.items():
+        #     print(f"Page {pn}:\n{txt}\n{'-'*40}")
 
 
     def process_microsoft_word(self):
@@ -141,20 +160,22 @@ class IndexMaker():
                 for paragraph in Document(self.own_index).paragraphs:
                     text = paragraph.text or ""
                     # filter so that only words matching the pattern "\w+\:" are considered"
-                    pattern = r"\w+(?:[ -][\w\/\(\)\.\']+)*"
+                    pattern = r"\w+(?:[ -][\w\/\(\)\.'\´]+)*"
                     filtered_words_list = re.findall(pattern, text)
                     filtered_words_str = ' '.join(filtered_words_list)
 
                     # detect proper nouns and tag them with 42
                     mots_liste = filtered_words_str.split()
-                    if '/' not in filtered_words_str and len(mots_liste)> 1 and mots_liste[-1][0].isupper():
+                    if '/' not in filtered_words_str and len(mots_liste)> 1 and filtered_words_str.upper() not in COUNTRY_NAMES and mots_liste[-1][0].isupper():
                         filtered_words_str = filtered_words_str.replace(" ","42")
+                        # debug
+                        #print("Proper noun detected:", filtered_words_str)
 
                     words_set = set([filtered_words_str,])  # Wrap the single string in a list before creating a set
 
                     self.own_index_set.update(words_set)
 
-                print("Custom terms to find:",self.own_index_set)
+                #print("Custom terms to find:",self.own_index_set)
 
             elif own_index_extension == ".txt":
                 with open(self.own_index, 'r', encoding='utf-8') as f:
@@ -165,7 +186,7 @@ class IndexMaker():
 
                 raise ValueError("Unsupported file format for own_index. Please provide a PDF or Word document.")
 
-            # Now remove all numbers and punctuation signs from the set, 
+            # Filter out short words
             self.own_index_set = {word for word in self.own_index_set if len(word) >= MIN_NUM_LETTERS}
         else:
             pass
@@ -185,34 +206,54 @@ class IndexMaker():
 
         self.text_extracted = True
 
-    def page_numbers_to_hyphens(self, pages:list):
+    def page_numbers_to_hyphens(self, page_nums:list):
         """
         converts a list of page numbers into a string with hyphens for consecutive numbers
         """
 
-        if not pages:
+        if not page_nums:
             return ""
 
 
         result_string = ""       
-        pages = sorted(set(pages))
-        current_num = pages[0]
-        tmp_list =[]
+        page_nums = sorted(set(page_nums))
+        previous_num = page_nums[0]
+        tmp_list =[previous_num]
 
-        for page_num in pages[1:]:
+        if len(page_nums) == 1:
+            if not isinstance(page_nums[0], int) or page_nums[0] < 1:
+                raise ValueError("Page numbers must be positive integers.")
+            return str(page_nums[0])
+
+        for i, page_num in enumerate(page_nums[1:]):
             if not isinstance(page_num, int) or page_num < 1:
                 raise ValueError("Page numbers must be positive integers.")
 
-            if page_num == current_num + 1:
-                current_num = page_num
+            if len(page_nums) == 2:
+                return f"{page_nums[0]}, {page_nums[1]}"
+
+            elif page_num == previous_num + 1:
+                previous_num = page_num
                 tmp_list.append(page_num)
-                continue
+
+                # if last page number in the list
+                if i == len(page_nums)-2:
+                    if len(tmp_list) > 1:
+                        result_string += f"{tmp_list[0]}-{tmp_list[-1]}"
+                    else:
+                        result_string += f"{page_num}"
+        
             else:
                 if len(tmp_list) > 1:
-                    result_string += f"{tmp_list[0]}-{tmp_list[-1]}, "
+                    result_string += f"{tmp_list[0]}-{tmp_list[-1]}, {page_num},"
                 else:
-                    result_string += f"{current_num}, "
-                current_num = page_num
+                    result_string += f"{page_num}, "
+
+                    # Remove the last comma for the last element
+                    if i == len(page_nums)-2:
+                        result_string = result_string.rstrip(", ")
+                previous_num = page_num
+                tmp_list = []
 
         return result_string
 
@@ -232,9 +273,9 @@ class IndexMaker():
         for page_number, text in self.pages.items():
 
             if self.own_index_set:
+
                 # Search each term of the own index set in the page text
                 for term in self.own_index_set:
-
 
                     # if the term had a bar search for any of the words
                     if '/' in term:
@@ -244,17 +285,15 @@ class IndexMaker():
                             pattern = r'\b' + re.escape(subterm) + r'\b'
                             if re.search(pattern, text, re.IGNORECASE):
                                 word_pages[term].add(page_number)
-                                break
 
                     # If the term has two words, and the second term starts with
                     # a capital letter, we have a proper noun
                     # then only search for the second term (family name)
                     elif "42" in term : # proper nouns
                         term = term.replace("42"," ")
-                        term2 = term.split()[1] # search the family name of the proper noun
-                        # the search should be case-SENSITIVE
-                        pattern = r'\b' + re.escape(term2) + r'\b'
-                        if re.search(pattern, text):
+                        term2 = term.split()[-1] # search the family name of the proper noun
+                        pattern = r'\b' + re.escape(term2,) + r'\b'
+                        if re.search(pattern, text, re.IGNORECASE):
                             word_pages[term].add(page_number)
 
                     # if the term bears parenthesis, remove them and search for the remaining part
@@ -292,7 +331,7 @@ class IndexMaker():
         self.index = {word: sorted(pages) for word, pages in word_pages.items()}
 
         # Remove -1 from pages if present and convert successive numbers to hyphen ranges
-        self.index = {word : self.page_numbers_to_hyphens([p for p in pages if p != -1]) for word, pages in self.index.items()}
+        self.index = {word : [p for p in pages if p != -1] for word, pages in self.index.items()}
 
 
     def save_index_to_docx(self):
@@ -313,7 +352,9 @@ class IndexMaker():
                     doc.add_heading(current_letter, level=2)
 
                 # Add the word and its pages in the same paragraph
-                paragraph = doc.add_paragraph(f"{word}: {', '.join(map(str, self.index[word]))}")
+                #paragraph = doc.add_paragraph(f"{word}: {', '.join(map(str, self.index[word]))}")
+                page_string = self.page_numbers_to_hyphens(self.index[word])
+                paragraph = doc.add_paragraph(f"{word}: {page_string}")
                 paragraph_format = paragraph.paragraph_format
                 paragraph_format.space_before = 0
                 paragraph_format.space_after = 0
